@@ -33,7 +33,9 @@ export const state = {
   friendsBusy: false,
   activeFriendId: null,             // friend detail sheet target
   removeTargetId: null,             // remove-friend confirmation target
-  inviteLink: null,                 // shareable URL minted for the invite sheet
+  myFriendCode: null,               // the user's permanent 6-char code (fetched once)
+  friendCodeInput: '',              // "add a friend by code" input on the invite sheet
+  inviteLink: null,                 // shareable URL built from myFriendCode
   inviteBusy: false,
   inviteError: null,
   pendingInviteCode: null,          // an invite awaiting the user's accept confirmation
@@ -312,6 +314,7 @@ export async function signOut() {
   if (state.profile) offline.clearTodayCache(state.session?.user?.id || 'demo');
   setState({ session: null, profile: null, goals: [], completed: new Set(), screen: 'welcome', welcomeStep: 0, sheet: null,
              friends: [], friendsLoaded: false, activeFriendId: null, inviteLink: null, pendingInviteCode: null,
+             myFriendCode: null, friendCodeInput: '',
              notifEnabled: false, needsInstall: false });
 }
 
@@ -524,11 +527,7 @@ export function go(screen) {
   if (screen === 'friends') loadFriends();
 }
 export function openSheet(sheet) { setState({ sheet }); }
-export function closeSheet() {
-  const patch = { sheet: null };
-  if (state.sheet === 'invite') patch.inviteLink = null;   // mint a fresh code next open
-  setState(patch);
-}
+export function closeSheet() { setState({ sheet: null }); }
 
 // ---- friends (FRND-3..FRND-6) ----------------------------------------------
 // Demo seed (no backend) so the Friends UI is fully previewable — mirrors the design artifact.
@@ -575,13 +574,44 @@ function buildInviteUrl(code) {
 }
 
 export async function openInvite() {
-  setState({ sheet: 'invite', inviteLink: null, inviteError: null });
-  if (!backend()) { setState({ inviteLink: buildInviteUrl('demo-warm') }); return; }
+  setState({ sheet: 'invite', inviteError: null, friendCodeInput: '' });
+  if (!backend()) { setState({ myFriendCode: 'EMBER1', inviteLink: buildInviteUrl('EMBER1') }); return; }
+  if (state.myFriendCode) return;               // permanent — fetch once, reuse forever
   try {
     setState({ inviteBusy: true });
-    const code = await api.createInvite();
-    setState({ inviteBusy: false, inviteLink: buildInviteUrl(code) });
+    const code = await api.getFriendCode();
+    setState({ inviteBusy: false, myFriendCode: code, inviteLink: buildInviteUrl(code) });
   } catch (e) { setState({ inviteBusy: false, inviteError: e.message }); }
+}
+
+export async function copyFriendCode() {
+  if (!state.myFriendCode) return;
+  try { await navigator.clipboard.writeText(state.myFriendCode); } catch { /* toast anyway */ }
+  showToast('Code copied ✓');
+}
+
+// Add a friend by typing their code — the no-URL path that works everywhere
+// (in-app browsers lose ?invite= links across the sign-in round-trip).
+export async function addFriendByCode() {
+  if (state.busy) return;
+  const code = state.friendCodeInput.trim();
+  if (!code) return;
+  if (!backend()) {
+    const demo = { friendshipId: 'demo-new', id: 'demo-new', name: 'New friend', emoji: '🐤', color: '#3E6B99',
+                   status: 'notstarted', personal: 0, longest: 0, shared: 0, sharedLongest: 0, sharedState: 'zero' };
+    setState({ friends: [...state.friends, demo], friendCodeInput: '', sheet: null, friendsLoaded: true });
+    showToast("You're now friends 🔥");
+    return;
+  }
+  try {
+    setState({ busy: true, inviteError: null });
+    await api.addFriendByCode(code);
+    setState({ busy: false, friendCodeInput: '', sheet: null });
+    showToast("You're now friends 🔥");
+    await loadFriends();
+  } catch (e) {
+    setState({ busy: false, inviteError: inviteErrorMessage(e.message || '') });
+  }
 }
 
 export async function copyInviteLink() {
@@ -639,7 +669,13 @@ export async function acceptPendingInvite() {
   }
   try {
     setState({ busy: true });
-    await api.acceptInvite(code);
+    // links carry a permanent friend code now; fall back to the legacy
+    // single-use invite RPC so links minted before 0004 still resolve
+    try { await api.addFriendByCode(code); }
+    catch (e) {
+      if (!/code_not_found/.test(e.message || '')) throw e;
+      await api.acceptInvite(code);
+    }
     setState({ busy: false, pendingInviteCode: null, sheet: null, screen: 'friends' });
     showToast("You're now friends 🔥");
     await loadFriends();
@@ -650,11 +686,11 @@ export async function acceptPendingInvite() {
 }
 
 function inviteErrorMessage(msg) {
-  if (/self/.test(msg))      return "That's your own invite link 🙂";
-  if (/expired/.test(msg))   return 'That invite has expired';
-  if (/used/.test(msg))      return 'That invite was already used';
-  if (/not_found/.test(msg)) return "That invite link isn't valid";
-  return "Couldn't accept that invite";
+  if (/self/.test(msg))      return "That's your own code 🙂";
+  if (/expired/.test(msg))   return 'That invite has expired — ask for their friend code instead';
+  if (/used/.test(msg))      return 'That invite was already used — ask for their friend code instead';
+  if (/not_found/.test(msg)) return "That code doesn't match anyone — double-check it";
+  return "Couldn't add that friend — try again";
 }
 
 // ---- friend detail + nudge + remove (FRND-5) -------------------------------

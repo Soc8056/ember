@@ -136,14 +136,22 @@ export async function updateStreakCache({ current, longest, freezesAvailable, pe
 }
 
 // ---- friends + invites (FRND-1..FRND-6) ------------------------------------
-// Mint a single-use invite code; the caller builds the shareable URL from it.
-export async function createInvite() {
+// The caller's permanent friend code (minted server-side on first call). Reusable
+// forever, across any number of friends — see supabase/migrations/0004_friend_codes.sql.
+export async function getFriendCode() {
   assert();
-  const { data, error } = await supabase.rpc('create_invite');
+  const { data, error } = await supabase.rpc('my_friend_code');
   if (error) throw error;
-  return data; // bare code string
+  return data; // bare 6-char code
 }
-// Establish an accepted friendship from an invite code (server validates + burns it).
+// Establish an accepted friendship from someone's friend code (case-insensitive, reusable).
+export async function addFriendByCode(code) {
+  assert();
+  const { data, error } = await supabase.rpc('add_friend_by_code', { p_code: code });
+  if (error) throw error;
+  return data; // { friendship_id, friend_id }
+}
+// Legacy single-use invite acceptance — kept so old ?invite= links still resolve.
 export async function acceptInvite(code) {
   assert();
   const { data, error } = await supabase.rpc('accept_invite', { p_code: code });

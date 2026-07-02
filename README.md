@@ -64,6 +64,9 @@ UI). To connect the real backend, see below.
      `create_invite` / `accept_invite` / `friends_overview` security-definer RPCs.
    - `supabase/migrations/0003_notifications.sql` — M3 `push_subscriptions` /
      `notifications_sent` / `nudges`, RLS, and the `notifications_due()` sweep selector.
+   - `supabase/migrations/0004_friend_codes.sql` — permanent per-user friend codes
+     (`my_friend_code` / `add_friend_by_code`). Replaces single-use invite links: one
+     reusable code per user, shareable as a link or typed directly into the app.
 3. **Auth → Providers → Email**: enable the Email provider (magic links are on by default).
 4. **Auth → URL Configuration** — without this, magic links redirect to the default
    `http://localhost:3000` and sign-in silently dead-ends:
@@ -86,6 +89,11 @@ UI). To connect the real backend, see below.
    app storage separate from Safari's, so a link (which opens in Safari) can never
    sign the installed app in. The welcome screen accepts this 6-digit code instead
    ("Already got a code? Enter it"), signing in whichever context you type it into.
+
+   > **No code in the email?** The code only appears if the template body literally
+   > contains `{{ .Token }}` (capital T). Check **both** templates — an existing user
+   > gets the *Magic Link* template, but a brand-new email address gets *Confirm
+   > signup* — and make sure each one was saved.
 
    > **Rate limits**: the "too many attempts" error is Supabase's server-side cap on
    > auth emails (built-in SMTP allows only ~2/hour, plus a 60s gap between sends).

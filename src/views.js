@@ -482,24 +482,34 @@ function renderSheets(s) {
   </div>`;
 }
 
-// ---- INVITE (FRND-1): share a single-use link -------------------------------
+// ---- INVITE (FRND-1): your permanent friend code + add-by-code ---------------
 function renderInviteSheet(s) {
   const copyIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`;
   const shareIcon = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>`;
-  const linkText = s.inviteError
-    ? `<span style="color:var(--error);">${esc(s.inviteError)}</span>`
-    : esc(s.inviteLink || (s.inviteBusy ? 'Minting a link…' : ''));
+  const codeText = s.myFriendCode
+    ? esc(s.myFriendCode)
+    : (s.inviteBusy ? '· · · · · ·' : '——————');
   return `<div style="position:absolute; left:0; right:0; bottom:0; background:var(--surface); border-radius:24px 24px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.3); padding-bottom:calc(24px + env(safe-area-inset-bottom)); animation:sheetUp .3s cubic-bezier(.32,.72,0,1);">
       <div style="display:flex; justify-content:center; padding:10px 0 4px;"><span style="width:36px; height:4px; border-radius:999px; background:var(--hairline);"></span></div>
       <div style="padding:8px 24px 0; text-align:center;">
-        <div style="filter:drop-shadow(0 0 20px rgba(245,98,10,.28)); display:flex; justify-content:center; margin-bottom:8px;">${flame(56, 66)}</div>
-        <h2 style="margin:0 0 6px; font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:22px; color:var(--ink);">Invite a friend</h2>
-        <p style="margin:0 0 18px; font-size:15px; line-height:22px; color:var(--ink-soft);">Send them this private link. It only works once.</p>
-        <div style="display:flex; align-items:center; gap:8px; padding:6px 6px 6px 16px; border:1px solid var(--hairline); border-radius:14px; background:var(--bg); margin-bottom:12px;">
-          <span style="flex:1; min-width:0; text-align:left; font-size:14px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${linkText}</span>
-          <button data-act="copyInvite" style="padding:9px 14px; border:none; border-radius:10px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;">${copyIcon}Copy</button>
+        <div style="filter:drop-shadow(0 0 20px rgba(245,98,10,.28)); display:flex; justify-content:center; margin-bottom:8px;">${flame(48, 58)}</div>
+        <h2 style="margin:0 0 6px; font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:22px; color:var(--ink);">Add friends</h2>
+        <p style="margin:0 0 14px; font-size:14px; line-height:21px; color:var(--ink-soft);">This is your code — it never changes, and any number of friends can use it.</p>
+        <button data-act="copyCode" style="width:100%; border:1px dashed var(--hairline); border-radius:16px; background:var(--bg); padding:14px; margin-bottom:10px; cursor:pointer; font-family:'Fraunces',Georgia,serif;">
+          <span style="display:block; font-size:32px; letter-spacing:10px; font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums; text-indent:10px;">${codeText}</span>
+          <span style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px; font-family:'Inter',system-ui,sans-serif; font-size:12px; font-weight:600; color:var(--ink-soft);">${copyIcon}Tap to copy</span>
+        </button>
+        <button data-act="shareInvite" style="width:100%; padding:13px; border:none; border-radius:999px; background:var(--sunken); color:var(--ink); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">${shareIcon}Share as a link</button>
+        <div style="display:flex; align-items:center; gap:12px; margin:16px 0 12px;">
+          <span style="flex:1; height:1px; background:var(--hairline);"></span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.06em;">Got a friend's code?</span>
+          <span style="flex:1; height:1px; background:var(--hairline);"></span>
         </div>
-        <button data-act="shareInvite" style="width:100%; padding:14px; border:none; border-radius:999px; background:var(--sunken); color:var(--ink); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">${shareIcon}Share link</button>
+        <div style="display:flex; gap:8px;">
+          <input data-field="friendCode" value="${esc(s.friendCodeInput)}" placeholder="ABC123" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" style="flex:1; min-width:0; padding:12px 14px; border-radius:14px; border:1px solid var(--hairline); background:var(--bg); color:var(--ink); font-family:inherit; font-size:17px; font-weight:600; letter-spacing:4px; text-transform:uppercase; text-align:center; outline:none;">
+          <button data-act="addFriendByCode" ${s.busy ? 'disabled' : ''} style="padding:12px 20px; border:none; border-radius:14px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer;">${s.busy ? '…' : 'Add'}</button>
+        </div>
+        ${s.inviteError ? `<p style="margin:10px 0 0; font-size:13px; color:var(--error);">${esc(s.inviteError)}</p>` : ''}
       </div>
     </div>`;
 }

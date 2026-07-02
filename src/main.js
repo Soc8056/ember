@@ -45,7 +45,9 @@ const clickMap = {
   retryFriends: () => store.retryFriends(),
   openInvite: () => store.openInvite(),
   copyInvite: () => store.copyInviteLink(),
+  copyCode: () => store.copyFriendCode(),
   shareInvite: () => store.shareInviteLink(),
+  addFriendByCode: () => store.addFriendByCode(),
   openFriend: (el) => store.openFriend(el.dataset.id),
   nudgeFriend: (el) => store.nudgeFriend(el.dataset.id),
   askRemoveFriend: (el) => store.askRemoveFriend(el.dataset.id),
@@ -76,6 +78,7 @@ root.addEventListener('input', (e) => {
   const field = el.dataset.field;
   if (field === 'email') state.email = el.value;
   else if (field === 'otpCode') state.otpCode = el.value.replace(/\D/g, '').slice(0, 6);
+  else if (field === 'friendCode') state.friendCodeInput = el.value.replace(/[^\w-]/g, '').toUpperCase();
   else if (field === 'draftName') state.draftName = el.value;
   else if (field === 'newGoal') state.newGoal = el.value;
   else if (field === 'rename') store.renameGoalLive(el.dataset.id, el.value);
@@ -95,6 +98,7 @@ root.addEventListener('keydown', (e) => {
   const f = el.dataset.field;
   if (f === 'email') { e.preventDefault(); store.sendMagicLink(); }
   else if (f === 'otpCode') { e.preventDefault(); store.verifyCode(); }
+  else if (f === 'friendCode') { e.preventDefault(); store.addFriendByCode(); }
   else if (f === 'draftName') { e.preventDefault(); store.saveProfile(); }
   else if (f === 'newGoal') { e.preventDefault(); store.addGoal(); }
   else if (f === 'rename') { e.preventDefault(); el.blur(); }
