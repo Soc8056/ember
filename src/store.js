@@ -162,7 +162,15 @@ export async function sendMagicLink() {
     setState({ busy: true, error: null });
     await api.sendMagicLink(email);
     setState({ busy: false, welcomeStep: 1 });
-  } catch (e) { setState({ busy: false, error: e.message }); }
+  } catch (e) { setState({ busy: false, error: magicLinkError(e.message || '') }); }
+}
+
+function magicLinkError(msg) {
+  if (/rate.limit|too.many/i.test(msg))   return 'Too many attempts — wait a few minutes and try again.';
+  if (/invalid.*email|email.*invalid/i.test(msg)) return 'That email address doesn\'t look right.';
+  if (/not.*allowed|redirect/i.test(msg)) return 'Sign-in isn\'t enabled for this URL — contact the developer.';
+  if (/signup.*disabled/i.test(msg))      return 'New sign-ups are currently disabled.';
+  return msg || 'Something went wrong — try again.';
 }
 
 function loginAsTestUser() {

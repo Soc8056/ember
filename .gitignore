@@ -1,6 +1,8 @@
 # Local credentials — never commit these
-src/env.js
 keys-and-shit.md
+
+# src/env.js is committed (only public-safe values: anon key + VAPID public key)
+# The service role key and VAPID private key are Supabase function secrets only
 
 # Supabase CLI temp files (project-specific, not portable)
 supabase/.temp/

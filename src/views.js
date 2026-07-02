@@ -322,10 +322,10 @@ function renderWelcome(s) {
         <p style="margin:0; font-size:16px; line-height:24px; color:var(--ink-soft); max-width:260px;">Keep the flame going, together. A small daily ritual with a couple of close friends.</p>
       </div>
       <div style="display:flex; flex-direction:column; gap:12px; padding-top:20px;">
-        <input data-field="email" value="${esc(s.email)}" placeholder="you@email.com" inputmode="email" type="email" style="width:100%; padding:15px 16px; border-radius:14px; border:1px solid var(--hairline); background:var(--surface); color:var(--ink); font-family:inherit; font-size:16px; outline:none;">
-        <button data-act="sendLink" ${s.busy ? 'disabled' : ''} style="width:100%; padding:15px; border:none; border-radius:999px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-sm);">${s.busy ? 'Sending…' : 'Send me a link'}</button>
+        <input data-field="email" value="${esc(s.email)}" placeholder="you@email.com" inputmode="email" type="email" autocomplete="email" style="width:100%; padding:15px 16px; border-radius:14px; border:1px solid var(--hairline); background:var(--surface); color:var(--ink); font-family:inherit; font-size:16px; outline:none;">
+        <button data-act="sendLink" ${s.busy ? ‘disabled’ : ‘’} style="width:100%; padding:15px; border:none; border-radius:999px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-sm);">${s.busy ? ‘Sending…’ : ‘Send me a link’}</button>
         <p style="margin:2px 0 0; text-align:center; font-size:12px; color:var(--ink-soft);">No passwords. We’ll email you a magic link.</p>
-        ${s.error ? `<p style="margin:0; text-align:center; font-size:12px; color:var(--error);">${esc(s.error)}</p>` : ''}
+        ${s.error ? errorBanner(s.error, ‘’) : ‘’}
       </div>
     </div>`;
 
@@ -335,7 +335,8 @@ function renderWelcome(s) {
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
       </span>
       <h1 style="margin:0 0 8px; font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:26px; color:var(--ink);">Check your email</h1>
-      <p style="margin:0 0 26px; font-size:15px; line-height:22px; color:var(--ink-soft); max-width:250px;">We sent a sign-in link to <span style="color:var(--ink); font-weight:600;">${esc(s.email)}</span>. Tap it to continue.</p>
+      <p style="margin:0 0 10px; font-size:15px; line-height:22px; color:var(--ink-soft); max-width:250px;">We sent a sign-in link to <span style="color:var(--ink); font-weight:600;">${esc(s.email)}</span>. Tap it to continue.</p>
+      <p style="margin:0 0 26px; font-size:13px; color:var(--ink-soft);">Don't see it? Check your spam folder.</p>
       ${s.hasSupabase ? '' : `<button data-act="welcomeContinueDemo" style="padding:13px 22px; border:none; border-radius:999px; background:var(--sunken); color:var(--ink); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer;">Continue (demo)</button>`}
     </div>`;
 
