@@ -114,6 +114,7 @@ export async function init() {
   applyTheme();
   captureInviteFromUrl();           // stash any ?invite=<code> before auth redirect strips it
   captureGoFromUrl();               // stash any ?go= deep-link from a notification click
+  captureAuthErrorFromUrl();        // surface a failed magic-link redirect (e.g. expired link)
   setState({ notifSupported: push.pushSupported(), isStandalone: push.isStandalone(), notifPermission: push.permission(),
              needsInstall: push.isIOS() && !push.isStandalone() });
   window.addEventListener('online', () => { setState({ online: true }); replayPending(); });
@@ -163,6 +164,23 @@ export async function sendMagicLink() {
     await api.sendMagicLink(email);
     setState({ busy: false, welcomeStep: 1 });
   } catch (e) { setState({ busy: false, error: magicLinkError(e.message || '') }); }
+}
+
+// A failed verify (expired/used link) redirects back with the error in the URL
+// fragment or query — supabase-js never turns that into a session or an event,
+// so read it here and show it on the welcome screen instead of a silent dead end.
+function captureAuthErrorFromUrl() {
+  try {
+    const params = new URLSearchParams(
+      (window.location.hash || '').replace(/^#/, '') || window.location.search.slice(1));
+    const code = params.get('error_code'), desc = params.get('error_description');
+    if (!params.get('error') && !code) return;
+    const msg = /expired/i.test(code || desc || '')
+      ? 'That sign-in link has expired — enter your email to get a fresh one.'
+      : (desc ? desc.replace(/\+/g, ' ') : 'Sign-in failed — try sending a new link.');
+    state.error = msg;                                  // init() renders right after
+    window.history.replaceState({}, '', window.location.pathname);
+  } catch { /* no URL API */ }
 }
 
 function magicLinkError(msg) {

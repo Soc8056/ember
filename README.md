@@ -65,13 +65,17 @@ UI). To connect the real backend, see below.
    - `supabase/migrations/0003_notifications.sql` — M3 `push_subscriptions` /
      `notifications_sent` / `nudges`, RLS, and the `notifications_due()` sweep selector.
 3. **Auth → Providers → Email**: enable the Email provider (magic links are on by default).
-   Add `http://localhost:5173` to **Auth → URL Configuration → Redirect URLs**.
-4. Copy your project URL + anon key into local config:
+4. **Auth → URL Configuration** — without this, magic links redirect to the default
+   `http://localhost:3000` and sign-in silently dead-ends:
+   - Set **Site URL** to `http://localhost:5173` (or wherever you deploy).
+   - Add `http://localhost:5173/**` to **Redirect URLs** (the `/**` glob covers
+     `/index.html` and query-string variants).
+5. Copy your project URL + anon key into local config:
    ```bash
    cp src/env.example.js src/env.js   # then edit src/env.js
    ```
    `src/env.js` is gitignored. The anon key is public by design — RLS is the real guard.
-5. Reload the app and sign in with your email.
+6. Reload the app and sign in with your email.
 
 ## How the streak works (PRD §3.2)
 

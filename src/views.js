@@ -323,9 +323,9 @@ function renderWelcome(s) {
       </div>
       <div style="display:flex; flex-direction:column; gap:12px; padding-top:20px;">
         <input data-field="email" value="${esc(s.email)}" placeholder="you@email.com" inputmode="email" type="email" autocomplete="email" style="width:100%; padding:15px 16px; border-radius:14px; border:1px solid var(--hairline); background:var(--surface); color:var(--ink); font-family:inherit; font-size:16px; outline:none;">
-        <button data-act="sendLink" ${s.busy ? ‘disabled’ : ‘’} style="width:100%; padding:15px; border:none; border-radius:999px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-sm);">${s.busy ? ‘Sending…’ : ‘Send me a link’}</button>
+        <button data-act="sendLink" ${s.busy ? 'disabled' : ''} style="width:100%; padding:15px; border:none; border-radius:999px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-sm);">${s.busy ? 'Sending…' : 'Send me a link'}</button>
         <p style="margin:2px 0 0; text-align:center; font-size:12px; color:var(--ink-soft);">No passwords. We’ll email you a magic link.</p>
-        ${s.error ? errorBanner(s.error, ‘’) : ‘’}
+        ${s.error ? errorBanner(s.error, '') : ''}
       </div>
     </div>`;
 

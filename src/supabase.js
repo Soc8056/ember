@@ -10,7 +10,11 @@ export const supabase = HAS_SUPABASE
         persistSession: true,          // AUTH-4: session survives app launches
         autoRefreshToken: true,
         detectSessionInUrl: true,      // completes the magic-link redirect
-        flowType: 'pkce',
+        // implicit (tokens in the redirect fragment), NOT pkce: a magic link is often
+        // opened in a different browser than the one that requested it (mail apps,
+        // default-browser mismatch), and pkce hard-fails there because the code
+        // verifier only exists in the requesting browser's storage.
+        flowType: 'implicit',
       },
     })
   : null;
