@@ -1,0 +1,32 @@
+# Fallback scheduler (PRD §10 Scheduler, §12). Use this instead of — or alongside — pg_cron if
+# Deno/web-push under pg_cron gives trouble. It just POSTs the sweep Edge Function on a cron; the
+# function does all the real work (select due users in their local time, send, prune).
+#
+# Repo secrets required:
+#   EMBER_SWEEP_URL     https://<PROJECT-REF>.functions.supabase.co/sweep
+#   EMBER_SWEEP_SECRET  same value as the sweep function's SWEEP_SECRET
+#
+# Note: GitHub cron is best-effort and can lag several minutes under load — fine for a ~15-min
+# reminder window, and a missed run never affects streak correctness (NF-4).
+name: ember sweep (fallback)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sweep
+        env:
+          SWEEP_URL: ${{ secrets.EMBER_SWEEP_URL }}
+          SWEEP_SECRET: ${{ secrets.EMBER_SWEEP_SECRET }}
+        run: |
+          code=$(curl -sS -o /dev/stderr -w '%{http_code}' -X POST "$SWEEP_URL" \
+            -H "x-sweep-secret: $SWEEP_SECRET" \
+            -H 'content-type: application/json' \
+            -d '{}')
+          echo "sweep responded $code"
+          test "$code" = "200"

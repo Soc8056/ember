@@ -1,0 +1,70 @@
+/* Ember — design tokens + base, ported verbatim from the Ember.html design artifact.
+   The phone-bezel / status-bar / reviewer-switcher preview scaffolding is intentionally
+   dropped so the app fills the viewport as an installable PWA (NF-1, NF-2). */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+
+.ember-root {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-family: 'Inter', system-ui, sans-serif;
+
+  /* dark is the default theme */
+  --bg:#161210; --surface:#211B17; --sunken:#2C241E; --ink:#F5EEE5; --ink-soft:#B4A594; --hairline:#3A2F27;
+  --ember:#FF7A2E; --ember-deep:#FF5A1F; --sage:#69B389; --warning:#F0A93A; --error:#F0645F; --info:#7FA9D6;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.32); --shadow-md:0 10px 30px rgba(0,0,0,.42);
+
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background: radial-gradient(1100px 620px at 50% -10%, color-mix(in srgb, var(--ember) 10%, var(--bg)), var(--bg));
+}
+.ember-root[data-theme="light"] {
+  --bg:#FAF6F0; --surface:#FFFFFF; --sunken:#F1E9DF; --ink:#211A15; --ink-soft:#6B5E52; --hairline:#E7DCCF;
+  --ember:#F5620A; --ember-deep:#D6410B; --sage:#4F8A6B; --warning:#E08A00; --error:#D64545; --info:#3E6B99;
+  --shadow-sm:0 1px 2px rgba(80,50,20,.06); --shadow-md:0 6px 20px rgba(80,50,20,.10);
+}
+
+/* The app column: full-bleed on phones, a centered device-width column on desktop. */
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  min-height: 100dvh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.app-scroll { flex: 1; position: relative; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.app-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.app-scroll { scrollbar-width: none; }
+
+/* keyframes (verbatim from artifact) */
+@keyframes emberSpring { 0%{transform:scale(1)} 45%{transform:scale(.955)} 100%{transform:scale(1)} }
+@keyframes sweepIn { from{transform:scaleX(0)} to{transform:scaleX(1)} }
+@keyframes sparkFly { 0%{opacity:1; transform:translate(-50%,-50%) translate(0,0) scale(1)} 100%{opacity:0; transform:translate(-50%,-50%) translate(var(--tx),var(--ty)) scale(.2)} }
+@keyframes flameFlare { 0%{transform:scale(1)} 45%{transform:scale(1.16)} 100%{transform:scale(1)} }
+@keyframes warnPulse { 0%,100%{filter:drop-shadow(0 0 0 rgba(240,169,58,0))} 50%{filter:drop-shadow(0 0 12px rgba(240,169,58,.65))} }
+@keyframes shimmer { 0%{background-position:-260px 0} 100%{background-position:260px 0} }
+@keyframes sheetUp { from{transform:translateY(101%)} to{transform:translateY(0)} }
+@keyframes scrimIn { from{opacity:0} to{opacity:1} }
+@keyframes toastIn { 0%{opacity:0; transform:translate(-50%,14px)} 12%{opacity:1; transform:translate(-50%,0)} 88%{opacity:1; transform:translate(-50%,0)} 100%{opacity:0; transform:translate(-50%,6px)} }
+@keyframes rollUp { from{transform:translateY(70%); opacity:0} to{transform:translateY(0); opacity:1} }
+@keyframes popIn { from{transform:scale(.8); opacity:0} to{transform:scale(1); opacity:1} }
+@keyframes fadeUp { from{transform:translateY(10px); opacity:0} to{transform:translateY(0); opacity:1} }
+
+@media (prefers-reduced-motion: reduce) {
+  .ember-root * { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+}
+
+/* full-screen loading splash shown before the first render */
+.boot {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px; color: var(--ink-soft);
+  font-size: 14px;
+}
+.boot svg { filter: drop-shadow(0 0 22px rgba(245,98,10,.3)); animation: flameFlare 2.4s ease-in-out infinite; }

@@ -1,0 +1,10 @@
+# Local credentials — never commit these
+src/env.js
+keys-and-shit.md
+
+# Supabase CLI temp files (project-specific, not portable)
+supabase/.temp/
+
+# OS / editor cruft
+.DS_Store
+*.log

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ember</title>
+  <meta name="description" content="Keep the flame going, together — a small daily streak with close friends.">
+
+  <!-- PWA (NF-1) -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#FAF6F0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161210" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ember">
+  <link rel="apple-touch-icon" href="./ember-icon-192.png">
+  <link rel="icon" href="./ember-mark.svg" type="image/svg+xml">
+
+  <!-- Fonts used by the design (Fraunces display serif + Inter UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <!-- Runtime Supabase config (edit src/env.js). Loaded before the module graph. -->
+  <script src="./src/env.js"></script>
+
+  <div class="ember-root" data-theme="dark">
+    <div id="app" class="app-shell"></div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

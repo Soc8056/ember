@@ -1,0 +1,61 @@
+# Scheduled DB backup (PRD §12, NF-9). Exports the Ember schema + data daily via the Supabase
+# Management API and uploads to Backblaze B2 (or swap for S3 / GitHub artifact — see below).
+# A missing backup never affects the running app; it is insurance against accidental data loss
+# on the free-tier project.
+#
+# Repo secrets required:
+#   EMBER_SUPABASE_URL           https://<PROJECT-REF>.supabase.co
+#   EMBER_SUPABASE_ANON_KEY      public anon key (RLS still applies — used only for the ping)
+#   EMBER_SUPABASE_SERVICE_ROLE  service-role key (for the management dump endpoint)
+#   EMBER_SUPABASE_PROJECT_REF   the short project ref (e.g. abcd1234)
+#   EMBER_SUPABASE_DB_PASSWORD   database password (for pg_dump direct connection)
+#   EMBER_BACKUP_BUCKET          storage bucket name (e.g. ember-backups)
+#   B2_KEY_ID / B2_APP_KEY       Backblaze B2 application key pair
+#
+# Minimal alternative: if you don't want B2, remove the upload steps and uncomment the
+# "upload-artifact" step to keep the dump as a GitHub Actions artifact (90 days).
+name: ember backup
+
+on:
+  schedule:
+    - cron: '17 3 * * *'   # 03:17 UTC daily (prime time avoids cron pile-up)
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump database via Supabase DB URL
+        env:
+          DB_PASSWORD: ${{ secrets.EMBER_SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.EMBER_SUPABASE_PROJECT_REF }}
+        run: |
+          DUMP_FILE="ember-$(date -u +%Y%m%d-%H%M%S).sql.gz"
+          echo "DUMP_FILE=$DUMP_FILE" >> $GITHUB_ENV
+          pg_dump "postgresql://postgres:${DB_PASSWORD}@db.${PROJECT_REF}.supabase.co:5432/postgres" \
+            --no-owner --no-acl --schema=public \
+            | gzip > "$DUMP_FILE"
+          echo "Dump size: $(du -h $DUMP_FILE | cut -f1)"
+
+      # Option A: upload to Backblaze B2 via rclone.
+      - name: Upload to B2
+        env:
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APP_KEY: ${{ secrets.B2_APP_KEY }}
+          BUCKET: ${{ secrets.EMBER_BACKUP_BUCKET }}
+        run: |
+          pip install -q b2
+          b2 authorize-account "$B2_KEY_ID" "$B2_APP_KEY"
+          b2 upload-file "$BUCKET" "$DUMP_FILE" "backups/$DUMP_FILE"
+          # prune dumps older than 30 days
+          b2 ls --long "$BUCKET" backups/ \
+            | awk -v cutoff="$(date -u -d '30 days ago' +%Y%m%d)" '$0 ~ /ember-/ {split($NF,a,"ember-"); split(a[2],d,"-"); if (d[1] < cutoff) print $NF}' \
+            | xargs -r -I{} b2 delete-file-version "$BUCKET" {}
+
+      # Option B (no B2): keep as a short-lived GitHub Actions artifact instead.
+      # - name: Upload artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ember-db-backup
+      #     path: "*.sql.gz"
+      #     retention-days: 30
