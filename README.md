@@ -70,12 +70,27 @@ UI). To connect the real backend, see below.
    - Set **Site URL** to `http://localhost:5173` (or wherever you deploy).
    - Add `http://localhost:5173/**` to **Redirect URLs** (the `/**` glob covers
      `/index.html` and query-string variants).
-5. Copy your project URL + anon key into local config:
+5. **Auth → Emails (templates)** — point the sign-in emails at the app instead of
+   Supabase's one-shot `/verify` endpoint. Inbox link-scanners (Gmail, Outlook
+   SafeLinks) prefetch `{{ .ConfirmationURL }}` and consume the one-time token, so
+   every real click lands on "link expired". Replace the link in **both** the
+   *Magic Link* and *Confirm signup* templates with:
+   ```html
+   <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Sign in to Ember</a>
+   ```
+   The app exchanges the `token_hash` itself via `verifyOtp` on load, so fetching
+   the URL consumes nothing — only running the app does.
+
+   > **Rate limits**: the "too many attempts" error is Supabase's server-side cap on
+   > auth emails (built-in SMTP allows only ~2/hour, plus a 60s gap between sends).
+   > It is not enforced anywhere in this app. To raise it: **Project Settings → Auth →
+   > SMTP** (configure custom SMTP), then **Auth → Rate Limits**.
+6. Copy your project URL + anon key into local config:
    ```bash
    cp src/env.example.js src/env.js   # then edit src/env.js
    ```
    `src/env.js` is gitignored. The anon key is public by design — RLS is the real guard.
-6. Reload the app and sign in with your email.
+7. Reload the app and sign in with your email.
 
 ## How the streak works (PRD §3.2)
 

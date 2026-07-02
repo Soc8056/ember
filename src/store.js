@@ -112,6 +112,7 @@ let pendingNav = null;              // a ?go= deep-link from a notification, app
 
 export async function init() {
   applyTheme();
+  const magicToken = captureTokenHashFromUrl(); // must run first — the helpers below strip the query string
   captureInviteFromUrl();           // stash any ?invite=<code> before auth redirect strips it
   captureGoFromUrl();               // stash any ?go= deep-link from a notification click
   captureAuthErrorFromUrl();        // surface a failed magic-link redirect (e.g. expired link)
@@ -128,6 +129,17 @@ export async function init() {
     if (session && !wasSignedIn) loadUser();
     if (!session && wasSignedIn) setState({ screen: 'welcome', welcomeStep: 0, profile: null });
   });
+
+  if (magicToken) {
+    // exchange the emailed token for a session; a failure falls through to the
+    // welcome screen with the error showing (init renders right after)
+    try { await api.verifyMagicToken(magicToken.token_hash, magicToken.type); }
+    catch (e) {
+      state.error = /expired|invalid|not.?found/i.test(e.message || '')
+        ? 'That sign-in link has expired or was already used — enter your email to get a fresh one.'
+        : magicLinkError(e.message || '');
+    }
+  }
 
   const session = await api.getSession();
   setState({ session });
@@ -155,6 +167,7 @@ async function loadUser() {
 }
 
 export async function sendMagicLink() {
+  if (state.busy) return;           // a double submit burns Supabase's email rate limit
   const email = state.email.trim();
   if (!email) return;
   if (email === 'test@ember.local') { loginAsTestUser(); return; }
@@ -164,6 +177,25 @@ export async function sendMagicLink() {
     await api.sendMagicLink(email);
     setState({ busy: false, welcomeStep: 1 });
   } catch (e) { setState({ busy: false, error: magicLinkError(e.message || '') }); }
+}
+
+// New-style magic link: the email links straight to the app carrying a
+// ?token_hash=…&type=email pair (see README — the Supabase email templates
+// must be updated to emit this). Grab and strip it here; init() exchanges it
+// for a session via verifyOtp. Unlike the default {{ .ConfirmationURL }},
+// merely fetching this URL consumes nothing, so mail scanners that prefetch
+// links can't kill the token before the user's real click.
+function captureTokenHashFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const token_hash = params.get('token_hash');
+    if (!token_hash) return null;
+    const type = params.get('type') || 'email';
+    params.delete('token_hash'); params.delete('type');
+    const rest = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (rest ? '?' + rest : ''));
+    return { token_hash, type };
+  } catch { return null; }
 }
 
 // A failed verify (expired/used link) redirects back with the error in the URL

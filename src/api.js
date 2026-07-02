@@ -15,6 +15,15 @@ export async function sendMagicLink(email) {
   });
   if (error) throw error;
 }
+// Exchange a token_hash carried by the email link for a session. The email
+// template links to the app itself (?token_hash={{ .TokenHash }}&type=email),
+// so nothing is consumed until this call runs — inbox link-scanners that
+// prefetch URLs can no longer burn the one-time token before the real click.
+export async function verifyMagicToken(token_hash, type = 'email') {
+  assert();
+  const { error } = await supabase.auth.verifyOtp({ type, token_hash });
+  if (error) throw error;
+}
 export async function getSession() {
   if (!HAS_SUPABASE) return null;
   const { data } = await supabase.auth.getSession();

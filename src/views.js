@@ -336,7 +336,7 @@ function renderWelcome(s) {
       </span>
       <h1 style="margin:0 0 8px; font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:26px; color:var(--ink);">Check your email</h1>
       <p style="margin:0 0 10px; font-size:15px; line-height:22px; color:var(--ink-soft); max-width:250px;">We sent a sign-in link to <span style="color:var(--ink); font-weight:600;">${esc(s.email)}</span>. Tap it to continue.</p>
-      <p style="margin:0 0 26px; font-size:13px; color:var(--ink-soft);">Don't see it? Check your spam folder.</p>
+      <p style="margin:0 0 26px; font-size:13px; color:var(--ink-soft);">Don't see it? Check your spam folder.<br>Asked more than once? Only the newest link works.</p>
       ${s.hasSupabase ? '' : `<button data-act="welcomeContinueDemo" style="padding:13px 22px; border:none; border-radius:999px; background:var(--sunken); color:var(--ink); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer;">Continue (demo)</button>`}
     </div>`;
 
