@@ -77,9 +77,15 @@ UI). To connect the real backend, see below.
    *Magic Link* and *Confirm signup* templates with:
    ```html
    <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Sign in to Ember</a>
+   <p>Or type this code in the app: <strong>{{ .Token }}</strong></p>
    ```
    The app exchanges the `token_hash` itself via `verifyOtp` on load, so fetching
    the URL consumes nothing — only running the app does.
+
+   The `{{ .Token }}` line matters for the installed PWA: iOS gives the Home-Screen
+   app storage separate from Safari's, so a link (which opens in Safari) can never
+   sign the installed app in. The welcome screen accepts this 6-digit code instead
+   ("Already got a code? Enter it"), signing in whichever context you type it into.
 
    > **Rate limits**: the "too many attempts" error is Supabase's server-side cap on
    > auth emails (built-in SMTP allows only ~2/hour, plus a 60s gap between sends).

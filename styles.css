@@ -3,7 +3,12 @@
    dropped so the app fills the viewport as an installable PWA (NF-1, NF-2). */
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; height: 100%; }
+/* Lock the document to the viewport: all scrolling happens inside .app-scroll.
+   Otherwise iOS standalone rubber-bands the <body> itself and reveals the bare
+   (white) document canvas below the app — the html background is the second
+   line of defense for the same reason (applyTheme keeps it matched to theme). */
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+html { background: #161210; }
 
 .ember-root {
   -webkit-font-smoothing: antialiased;
@@ -15,7 +20,7 @@ html, body { margin: 0; padding: 0; height: 100%; }
   --ember:#FF7A2E; --ember-deep:#FF5A1F; --sage:#69B389; --warning:#F0A93A; --error:#F0645F; --info:#7FA9D6;
   --shadow-sm:0 1px 2px rgba(0,0,0,.32); --shadow-md:0 10px 30px rgba(0,0,0,.42);
 
-  min-height: 100dvh;
+  height: 100%;
   display: flex;
   justify-content: center;
   background: radial-gradient(1100px 620px at 50% -10%, color-mix(in srgb, var(--ember) 10%, var(--bg)), var(--bg));
@@ -31,7 +36,7 @@ html, body { margin: 0; padding: 0; height: 100%; }
   position: relative;
   width: 100%;
   max-width: 440px;
-  min-height: 100dvh;
+  height: 100%;    /* exactly the viewport — the tab bar pins to its bottom edge */
   background: var(--bg);
   display: flex;
   flex-direction: column;
@@ -39,7 +44,7 @@ html, body { margin: 0; padding: 0; height: 100%; }
   color: var(--ink);
 }
 
-.app-scroll { flex: 1; position: relative; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.app-scroll { flex: 1; position: relative; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
 .app-scroll::-webkit-scrollbar { width: 0; height: 0; }
 .app-scroll { scrollbar-width: none; }
 

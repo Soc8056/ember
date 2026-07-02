@@ -324,7 +324,8 @@ function renderWelcome(s) {
       <div style="display:flex; flex-direction:column; gap:12px; padding-top:20px;">
         <input data-field="email" value="${esc(s.email)}" placeholder="you@email.com" inputmode="email" type="email" autocomplete="email" style="width:100%; padding:15px 16px; border-radius:14px; border:1px solid var(--hairline); background:var(--surface); color:var(--ink); font-family:inherit; font-size:16px; outline:none;">
         <button data-act="sendLink" ${s.busy ? 'disabled' : ''} style="width:100%; padding:15px; border:none; border-radius:999px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-sm);">${s.busy ? 'Sending…' : 'Send me a link'}</button>
-        <p style="margin:2px 0 0; text-align:center; font-size:12px; color:var(--ink-soft);">No passwords. We’ll email you a magic link.</p>
+        <p style="margin:2px 0 0; text-align:center; font-size:12px; color:var(--ink-soft);">No passwords. We’ll email you a magic link and a code.</p>
+        ${s.hasSupabase ? `<button data-act="haveCode" style="border:none; background:transparent; padding:4px; color:var(--ink-soft); font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; text-decoration:underline; text-underline-offset:3px;">Already got a code? Enter it</button>` : ''}
         ${s.error ? errorBanner(s.error, '') : ''}
       </div>
     </div>`;
@@ -335,9 +336,15 @@ function renderWelcome(s) {
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
       </span>
       <h1 style="margin:0 0 8px; font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:26px; color:var(--ink);">Check your email</h1>
-      <p style="margin:0 0 10px; font-size:15px; line-height:22px; color:var(--ink-soft); max-width:250px;">We sent a sign-in link to <span style="color:var(--ink); font-weight:600;">${esc(s.email)}</span>. Tap it to continue.</p>
-      <p style="margin:0 0 26px; font-size:13px; color:var(--ink-soft);">Don't see it? Check your spam folder.<br>Asked more than once? Only the newest link works.</p>
-      ${s.hasSupabase ? '' : `<button data-act="welcomeContinueDemo" style="padding:13px 22px; border:none; border-radius:999px; background:var(--sunken); color:var(--ink); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer;">Continue (demo)</button>`}
+      <p style="margin:0 0 10px; font-size:15px; line-height:22px; color:var(--ink-soft); max-width:250px;">We sent a sign-in link to <span style="color:var(--ink); font-weight:600;">${esc(s.email)}</span>. Tap it — or type the 6-digit code from the same email below.</p>
+      <p style="margin:0 0 22px; font-size:13px; color:var(--ink-soft);">Don't see it? Check your spam folder.<br>Asked more than once? Only the newest email works.</p>
+      ${s.hasSupabase ? `
+      <div style="width:100%; max-width:280px; display:flex; flex-direction:column; gap:10px;">
+        <input data-field="otpCode" value="${esc(s.otpCode)}" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" maxlength="6" style="width:100%; padding:14px 16px; border-radius:14px; border:1px solid var(--hairline); background:var(--surface); color:var(--ink); font-family:inherit; font-size:20px; letter-spacing:8px; text-align:center; outline:none; font-variant-numeric:tabular-nums;">
+        <button data-act="verifyCode" ${s.busy ? 'disabled' : ''} style="width:100%; padding:14px; border:none; border-radius:999px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-sm);">${s.busy ? 'Checking…' : 'Sign in with code'}</button>
+        <button data-act="backToEmail" style="padding:8px; border:none; background:transparent; color:var(--ink-soft); font-family:inherit; font-size:13px; font-weight:500; cursor:pointer;">Use a different email</button>
+        ${s.error ? errorBanner(s.error, '') : ''}
+      </div>` : `<button data-act="welcomeContinueDemo" style="padding:13px 22px; border:none; border-radius:999px; background:var(--sunken); color:var(--ink); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer;">Continue (demo)</button>`}
     </div>`;
 
   const emojiCell = (em) => {
@@ -381,7 +388,7 @@ function renderWelcome(s) {
     </div>`;
 
   const step = [step0, step1, step2, step3][s.welcomeStep] || step0;
-  return `<div style="padding: calc(env(safe-area-inset-top) + 40px) 28px 40px; min-height:100%; display:flex; flex-direction:column;">${step}</div>`;
+  return `<div style="padding: calc(env(safe-area-inset-top) + 40px) 28px calc(env(safe-area-inset-bottom) + 28px); min-height:100%; display:flex; flex-direction:column;">${step}</div>`;
 }
 
 // ---------------------------------------------------------------------------

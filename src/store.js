@@ -49,6 +49,7 @@ export const state = {
   // welcome flow
   welcomeStep: 0,                   // 0 email · 1 sent · 2 profile · 3 install
   email: '',
+  otpCode: '',                      // 6-digit code typed on the "check your email" step
   draftName: '',
   draftEmoji: '🦔',
 
@@ -87,6 +88,11 @@ export function applyTheme() {
   const resolved = resolveTheme(state.theme);
   document.querySelector('.ember-root')?.setAttribute('data-theme', resolved);
   state.resolvedTheme = resolved;
+  // Paint the document canvas + browser chrome to match: iOS rubber-band
+  // overscroll shows the <html> background, which is white unless set.
+  const bg = resolved === 'light' ? '#FAF6F0' : '#161210';
+  document.documentElement.style.backgroundColor = bg;
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', bg));
 }
 export function setTheme(theme) {
   offline.setTheme(theme);
@@ -175,8 +181,40 @@ export async function sendMagicLink() {
   try {
     setState({ busy: true, error: null });
     await api.sendMagicLink(email);
-    setState({ busy: false, welcomeStep: 1 });
+    setState({ busy: false, welcomeStep: 1, otpCode: '' });
   } catch (e) { setState({ busy: false, error: magicLinkError(e.message || '') }); }
+}
+
+// Step-1 shortcuts: jump to the code screen without re-sending (a re-send
+// invalidates the code already sitting in the inbox), or back to the email.
+export function goToCodeEntry() {
+  const email = state.email.trim();
+  if (!email) { setState({ error: 'Type your email first so we know which code to check.' }); return; }
+  setState({ welcomeStep: 1, error: null });
+}
+export function backToEmail() { setState({ welcomeStep: 0, error: null, otpCode: '' }); }
+
+// PWA sign-in (AUTH-1b): the emailed link opens in the browser, whose storage
+// iOS keeps separate from the installed app's — so the email also carries a
+// 6-digit code ({{ .Token }}) the user can type here, inside whichever
+// context they actually want the session in.
+export async function verifyCode() {
+  if (state.busy) return;
+  const code = state.otpCode.replace(/\D/g, '');
+  const email = state.email.trim();
+  if (!email) { setState({ error: 'Enter your email above first, then the code.' }); return; }
+  if (code.length < 6) { setState({ error: 'The code is 6 digits — check the email we sent.' }); return; }
+  try {
+    setState({ busy: true, error: null });
+    await api.verifyEmailCode(email, code);
+    // success fires onAuthChange → loadUser(); nothing else to do here
+    setState({ busy: false, otpCode: '' });
+  } catch (e) {
+    const msg = /expired|invalid|not.?found/i.test(e.message || '')
+      ? 'That code didn’t work — codes expire after a bit and only the newest one counts. Send a fresh link and try again.'
+      : magicLinkError(e.message || '');
+    setState({ busy: false, error: msg });
+  }
 }
 
 // New-style magic link: the email links straight to the app carrying a

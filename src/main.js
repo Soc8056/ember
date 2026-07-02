@@ -31,6 +31,9 @@ const clickMap = {
   pickNewEmoji: (el) => setState({ newEmoji: el.dataset.emoji }),
   pickWelcomeEmoji: (el) => setState({ draftEmoji: el.dataset.emoji }),
   sendLink: () => store.sendMagicLink(),
+  verifyCode: () => store.verifyCode(),
+  haveCode: () => store.goToCodeEntry(),
+  backToEmail: () => store.backToEmail(),
   welcomeContinueDemo: () => store.welcomeContinueDemo(),
   saveProfile: () => store.saveProfile(),
   finishWelcome: () => store.finishWelcome(),
@@ -72,6 +75,7 @@ root.addEventListener('input', (e) => {
   if (!el) return;
   const field = el.dataset.field;
   if (field === 'email') state.email = el.value;
+  else if (field === 'otpCode') state.otpCode = el.value.replace(/\D/g, '').slice(0, 6);
   else if (field === 'draftName') state.draftName = el.value;
   else if (field === 'newGoal') state.newGoal = el.value;
   else if (field === 'rename') store.renameGoalLive(el.dataset.id, el.value);
@@ -90,6 +94,7 @@ root.addEventListener('keydown', (e) => {
   if (!el) return;
   const f = el.dataset.field;
   if (f === 'email') { e.preventDefault(); store.sendMagicLink(); }
+  else if (f === 'otpCode') { e.preventDefault(); store.verifyCode(); }
   else if (f === 'draftName') { e.preventDefault(); store.saveProfile(); }
   else if (f === 'newGoal') { e.preventDefault(); store.addGoal(); }
   else if (f === 'rename') { e.preventDefault(); el.blur(); }
