@@ -87,8 +87,10 @@ UI). To connect the real backend, see below.
 
    The `{{ .Token }}` line matters for the installed PWA: iOS gives the Home-Screen
    app storage separate from Safari's, so a link (which opens in Safari) can never
-   sign the installed app in. The welcome screen accepts this 6-digit code instead
+   sign the installed app in. The welcome screen accepts this one-time code instead
    ("Already got a code? Enter it"), signing in whichever context you type it into.
+   The app accepts 6–10 digits, matching whatever **Email OTP Length** the project
+   is set to (Auth → Providers → Email — Supabase's allowed range is 6–10).
 
    > **No code in the email?** The code only appears if the template body literally
    > contains `{{ .Token }}` (capital T). Check **both** templates — an existing user

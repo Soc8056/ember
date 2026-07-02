@@ -24,7 +24,7 @@ export async function verifyMagicToken(token_hash, type = 'email') {
   const { error } = await supabase.auth.verifyOtp({ type, token_hash });
   if (error) throw error;
 }
-// Exchange the 6-digit code from the same email ({{ .Token }} in the template)
+// Exchange the one-time code from the same email ({{ .Token }} in the template)
 // for a session. This is the escape hatch for the installed PWA: iOS gives the
 // Home-Screen app its own storage, so a link opened in Safari can never sign
 // the standalone app in — typing the code inside the app can.

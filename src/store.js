@@ -51,7 +51,7 @@ export const state = {
   // welcome flow
   welcomeStep: 0,                   // 0 email · 1 sent · 2 profile · 3 install
   email: '',
-  otpCode: '',                      // 6-digit code typed on the "check your email" step
+  otpCode: '',                      // one-time code (6–10 digits, per project OTP length) typed on the "check your email" step
   draftName: '',
   draftEmoji: '🦔',
 
@@ -198,14 +198,14 @@ export function backToEmail() { setState({ welcomeStep: 0, error: null, otpCode:
 
 // PWA sign-in (AUTH-1b): the emailed link opens in the browser, whose storage
 // iOS keeps separate from the installed app's — so the email also carries a
-// 6-digit code ({{ .Token }}) the user can type here, inside whichever
+// one-time code ({{ .Token }}) the user can type here, inside whichever
 // context they actually want the session in.
 export async function verifyCode() {
   if (state.busy) return;
   const code = state.otpCode.replace(/\D/g, '');
   const email = state.email.trim();
   if (!email) { setState({ error: 'Enter your email above first, then the code.' }); return; }
-  if (code.length < 6) { setState({ error: 'The code is 6 digits — check the email we sent.' }); return; }
+  if (code.length < 6) { setState({ error: 'That looks too short — copy the whole code from the email we sent.' }); return; }
   try {
     setState({ busy: true, error: null });
     await api.verifyEmailCode(email, code);

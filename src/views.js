@@ -336,11 +336,11 @@ function renderWelcome(s) {
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
       </span>
       <h1 style="margin:0 0 8px; font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:26px; color:var(--ink);">Check your email</h1>
-      <p style="margin:0 0 10px; font-size:15px; line-height:22px; color:var(--ink-soft); max-width:250px;">We sent a sign-in link to <span style="color:var(--ink); font-weight:600;">${esc(s.email)}</span>. Tap it — or type the 6-digit code from the same email below.</p>
+      <p style="margin:0 0 10px; font-size:15px; line-height:22px; color:var(--ink-soft); max-width:250px;">We sent a sign-in link to <span style="color:var(--ink); font-weight:600;">${esc(s.email)}</span>. Tap it — or type the code from the same email below.</p>
       <p style="margin:0 0 22px; font-size:13px; color:var(--ink-soft);">Don't see it? Check your spam folder.<br>Asked more than once? Only the newest email works.</p>
       ${s.hasSupabase ? `
       <div style="width:100%; max-width:280px; display:flex; flex-direction:column; gap:10px;">
-        <input data-field="otpCode" value="${esc(s.otpCode)}" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" maxlength="6" style="width:100%; padding:14px 16px; border-radius:14px; border:1px solid var(--hairline); background:var(--surface); color:var(--ink); font-family:inherit; font-size:20px; letter-spacing:8px; text-align:center; outline:none; font-variant-numeric:tabular-nums;">
+        <input data-field="otpCode" value="${esc(s.otpCode)}" placeholder="12345678" inputmode="numeric" autocomplete="one-time-code" maxlength="10" style="width:100%; padding:14px 16px; border-radius:14px; border:1px solid var(--hairline); background:var(--surface); color:var(--ink); font-family:inherit; font-size:20px; letter-spacing:6px; text-align:center; outline:none; font-variant-numeric:tabular-nums;">
         <button data-act="verifyCode" ${s.busy ? 'disabled' : ''} style="width:100%; padding:14px; border:none; border-radius:999px; background:var(--ink); color:var(--bg); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-sm);">${s.busy ? 'Checking…' : 'Sign in with code'}</button>
         <button data-act="backToEmail" style="padding:8px; border:none; background:transparent; color:var(--ink-soft); font-family:inherit; font-size:13px; font-weight:500; cursor:pointer;">Use a different email</button>
         ${s.error ? errorBanner(s.error, '') : ''}

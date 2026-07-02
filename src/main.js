@@ -77,7 +77,7 @@ root.addEventListener('input', (e) => {
   if (!el) return;
   const field = el.dataset.field;
   if (field === 'email') state.email = el.value;
-  else if (field === 'otpCode') state.otpCode = el.value.replace(/\D/g, '').slice(0, 6);
+  else if (field === 'otpCode') state.otpCode = el.value.replace(/\D/g, '').slice(0, 10);
   else if (field === 'friendCode') state.friendCodeInput = el.value.replace(/[^\w-]/g, '').toUpperCase();
   else if (field === 'draftName') state.draftName = el.value;
   else if (field === 'newGoal') state.newGoal = el.value;

@@ -1,7 +1,7 @@
 // Custom service worker: installable shell + offline Today (NF-3, M1) AND the web-push
 // handlers (push / notificationclick / pushsubscriptionchange) for reminders + nudges (M3,
 // NOTIF-1/-5/-9). Push is best-effort — if any of this is unsupported the app is unaffected.
-const VERSION = 'ember-v6';
+const VERSION = 'ember-v7';
 const SHELL = [
   './',
   './index.html',
