@@ -79,9 +79,19 @@ function renderToday(s) {
            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--surface)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="position:relative; z-index:1;"><path d="M20 6 9 17l-5-5"/></svg>
          </span>`
       : `<span style="width:30px; height:30px; border-radius:999px; border:2px solid var(--hairline); flex-shrink:0;"></span>`;
+    // photo proof chip (M5): only on checked rows — thumbnail when attached,
+    // dashed camera otherwise. Inner data-act wins over the row's toggle.
+    const photo = s.photos && s.photos.get(g.id);
+    const busy = s.photoBusyId === g.id;
+    const photoChip = !checked ? '' : photo
+      ? `<img data-act="attachPhoto" data-id="${esc(g.id)}" src="${esc(photo.url)}" alt="Photo proof — tap to retake" style="width:34px; height:34px; border-radius:10px; object-fit:cover; flex-shrink:0; border:1.5px solid color-mix(in srgb, var(--sage) 45%, transparent); cursor:pointer;">`
+      : `<span data-act="attachPhoto" data-id="${esc(g.id)}" role="button" aria-label="Add a photo" style="width:34px; height:34px; border-radius:10px; border:1.5px dashed var(--hairline); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;${busy ? ' opacity:.4;' : ''}">
+           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+         </span>`;
     return `<button data-act="toggle" data-id="${esc(g.id)}" style="${rowStyle}">
       <span style="width:44px; height:44px; border-radius:14px; background:${emojiBg}; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">${esc(g.emoji || '✨')}</span>
       <span style="${titleStyle}">${esc(g.title)}</span>
+      ${photoChip}
       ${mark}
     </button>`;
   };
@@ -119,6 +129,10 @@ function renderToday(s) {
       </div>
     </div>
     <div style="display:flex; flex-direction:column; gap:12px;">${s.goals.map(goalRow).join('')}</div>
+    ${done > 0 ? `<button data-act="shareDay" style="margin:16px 2px 0; width:100%; display:flex; align-items:center; justify-content:center; gap:9px; padding:13px 14px; border:1px solid var(--hairline); border-radius:16px; background:var(--surface); color:var(--ink); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-sm);${s.shareBusy ? ' opacity:.5; pointer-events:none;' : ''}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      ${s.shareBusy ? 'Making your card…' : 'Share my day'}
+    </button>` : ''}
     <button data-act="openManage" style="margin:14px 2px 0; width:100%; display:flex; align-items:center; gap:10px; padding:12px 14px; border:none; background:transparent; color:var(--ink-soft); font-family:inherit; font-size:15px; font-weight:500; cursor:pointer;">
       <span style="width:30px; height:30px; border-radius:999px; border:1.5px dashed var(--hairline); display:flex; align-items:center; justify-content:center;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg>

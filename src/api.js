@@ -97,12 +97,14 @@ export async function archiveGoal(id) {
 }
 
 // ---- completions (GOAL-6) --------------------------------------------------
+// select('*') rather than naming columns so the app keeps working before
+// migration 0005 (photo_path) has been run — rows just lack the field.
 export async function getCompletions(localDate) {
   assert();
   const { data, error } = await supabase
-    .from('completions').select('goal_id').eq('local_date', localDate);
+    .from('completions').select('*').eq('local_date', localDate);
   if (error) throw error;
-  return new Set(data.map((r) => r.goal_id));
+  return data; // [{ goal_id, photo_path?, ... }]
 }
 export async function setCompletion(goalId, localDate, completed) {
   assert();
@@ -117,6 +119,35 @@ export async function setCompletion(goalId, localDate, completed) {
       .delete().eq('goal_id', goalId).eq('local_date', localDate);
     if (error) throw error;
   }
+}
+
+// ---- photos (private `photos` bucket, owner-scoped by storage RLS — 0005) ---
+// One photo per completed goal per day: userId/localDate/goalId.jpg (upsert
+// replaces a retake). The path is denormalized onto the completion row.
+export async function uploadCompletionPhoto(goalId, localDate, blob) {
+  assert();
+  const { data: u } = await supabase.auth.getUser();
+  const path = `${u.user.id}/${localDate}/${goalId}.jpg`;
+  const { error } = await supabase.storage.from('photos')
+    .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+  if (error) throw error;
+  const { error: e2 } = await supabase.from('completions')
+    .update({ photo_path: path }).eq('goal_id', goalId).eq('local_date', localDate);
+  if (e2) throw e2;
+  return path;
+}
+// The bucket is private (photos are as sensitive as goal titles, NF-7) — reads
+// go through short-lived signed URLs.
+export async function getPhotoUrl(path) {
+  assert();
+  const { data, error } = await supabase.storage.from('photos').createSignedUrl(path, 60 * 60);
+  if (error) throw error;
+  return data.signedUrl;
+}
+export async function removeCompletionPhoto(path) {
+  assert();
+  const { error } = await supabase.storage.from('photos').remove([path]);
+  if (error) throw error;
 }
 
 // ---- streak cache (denormalized on profiles so FRIENDS can read it, FRND-4) -

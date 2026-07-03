@@ -5,7 +5,8 @@ import { HAS_SUPABASE } from './supabase.js';
 import { CONFIG } from './config.js';
 import * as offline from './offline.js';
 import * as push from './push.js';
-import { computeStreak, computeSharedStreak, isPerfect } from './streak.js';
+import { computeStreak, computeSharedStreak, isPerfect, buildHistory } from './streak.js';
+import * as photos from './photos.js';
 import * as D from './dates.js';
 
 export const state = {
@@ -24,6 +25,9 @@ export const state = {
   todayLabel: D.todayLabel(D.detectTimezone()),
   goals: [],
   completed: new Set(),             // goal_ids completed today
+  photos: new Map(),                // goal_id -> { path, url } for today's attached photos
+  photoBusyId: null,                // goal awaiting photo compress/upload
+  shareBusy: false,                 // share-card render in flight
   history: [],                      // gap-filled finalized days (asc) for the streak walk
   streak: { current: 0, longest: 0, freezesAvailable: 1, frozen: false, state: 'zero' },
 
@@ -128,6 +132,15 @@ export async function init() {
              needsInstall: push.isIOS() && !push.isStandalone() });
   window.addEventListener('online', () => { setState({ online: true }); replayPending(); });
   window.addEventListener('offline', () => setState({ online: false }));
+
+  // Local-midnight rollover. A long-lived session (an installed PWA resumed from
+  // memory, a tab left open overnight) never reloads, so "today" must be re-derived
+  // while running — otherwise the app keeps showing AND writing against the previous
+  // local date, and the new day silently records nothing (the two-perfect-days-read-
+  // as-one bug). Re-check whenever the app resurfaces + once a minute while visible.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) ensureToday(); });
+  window.addEventListener('focus', () => ensureToday());
+  setInterval(() => { if (!document.hidden) ensureToday(); }, 60_000);
 
   if (!HAS_SUPABASE) { setState({ ready: true, screen: 'welcome', welcomeStep: 0 }); return; }
 
@@ -312,7 +325,7 @@ export async function finishWelcome() {
 export async function signOut() {
   if (HAS_SUPABASE) await api.signOut();
   if (state.profile) offline.clearTodayCache(state.session?.user?.id || 'demo');
-  setState({ session: null, profile: null, goals: [], completed: new Set(), screen: 'welcome', welcomeStep: 0, sheet: null,
+  setState({ session: null, profile: null, goals: [], completed: new Set(), photos: new Map(), screen: 'welcome', welcomeStep: 0, sheet: null,
              friends: [], friendsLoaded: false, activeFriendId: null, inviteLink: null, pendingInviteCode: null,
              myFriendCode: null, friendCodeInput: '',
              notifEnabled: false, needsInstall: false });
@@ -338,6 +351,24 @@ export async function saveEditProfile() {
 }
 
 // ---- today data ------------------------------------------------------------
+// The user's *current* local date differs from the one on screen — i.e. local
+// midnight passed while this session stayed alive. state.localDate is only ever
+// advanced through loadToday(), so this is the single rollover check.
+function dayRolledOver() {
+  if (!state.ready || state.screen === 'welcome') return false;
+  const tz = state.profile?.timezone || D.detectTimezone();
+  return D.todayLocal(tz) !== state.localDate;
+}
+
+// Re-derive "today" if the day rolled over mid-session. Returns true when a
+// rollover was handled (callers should treat the tap/state that triggered it
+// as belonging to the previous day and bail out).
+export async function ensureToday() {
+  if (!dayRolledOver()) return false;
+  await loadToday();
+  return true;
+}
+
 export async function loadToday() {
   const tz = state.profile?.timezone || D.detectTimezone();
   const localDate = D.todayLocal(tz);
@@ -349,18 +380,34 @@ export async function loadToday() {
     setState({ localDate, todayLabel: D.todayLabel(tz), goals: cache.goals || [],
                completed: new Set(cache.completions || []), streak: cache.streak || state.streak });
   } else {
-    setState({ localDate, todayLabel: D.todayLabel(tz) });
+    // new day (or first load): the previous day's checkmarks/photos must not
+    // leak into today. The streak number stays as cached until the refresh
+    // below (or the next reconnect) recomputes it from the day-log.
+    setState({ localDate, todayLabel: D.todayLabel(tz), completed: new Set(), photos: new Map() });
   }
   if (!backend() || !state.online) return;
 
   // 2) refresh from the source of truth
   try {
-    const [goals, completed] = await Promise.all([api.listActiveGoals(), api.getCompletions(localDate)]);
+    const [goals, rows] = await Promise.all([api.listActiveGoals(), api.getCompletions(localDate)]);
+    const completed = new Set(rows.map((r) => r.goal_id));
     setState({ goals, completed, todayError: null });
+    loadTodayPhotos(rows);      // best-effort, off the critical path
     await refreshStreak();
     persistCache();
     persistStreakCache();       // keep the profile cache friends read (FRND-4) fresh
   } catch (e) { setState({ todayError: e.message }); }
+}
+
+// Resolve signed URLs for today's stored photos (photo display is best-effort).
+async function loadTodayPhotos(rows) {
+  const withPhoto = rows.filter((r) => r.photo_path);
+  const map = new Map();
+  await Promise.all(withPhoto.map(async (r) => {
+    try { map.set(r.goal_id, { path: r.photo_path, url: await api.getPhotoUrl(r.photo_path) }); }
+    catch { /* photo unavailable — the checkmark is what matters */ }
+  }));
+  setState({ photos: map });
 }
 
 export function retryToday() { setState({ todayError: null }); loadToday(); }
@@ -385,12 +432,7 @@ async function refreshStreak() {
   const today = D.todayLocal(tz);
   let history = [];
   try {
-    const rows = await api.listDayResults();
-    const perfectByDate = new Map(rows.filter((r) => r.local_date < today).map((r) => [r.local_date, r.is_perfect]));
-    if (perfectByDate.size) {
-      const start = [...perfectByDate.keys()].sort()[0];
-      history = D.eachDay(start, D.prevDay(today)).map((d) => ({ local_date: d, is_perfect: perfectByDate.get(d) === true }));
-    }
+    history = buildHistory(await api.listDayResults(), today);
   } catch { /* offline / no history yet */ }
   state.history = history;
   recomputeStreak();
@@ -413,7 +455,23 @@ function persistCache() {
 }
 
 // ---- goal check-off (GOAL-6, GOAL-8) ---------------------------------------
+// main.js registers the function that opens the photo picker (a file input's
+// .click() has to originate near the user gesture, so the DOM layer owns it).
+let requestPhoto = null;
+export function setPhotoRequester(fn) { requestPhoto = fn; }
+
 export async function toggleGoal(goalId) {
+  // Never write against a stale date: if local midnight passed since the last
+  // paint, this tap landed on YESTERDAY's UI. Reload today and drop the tap —
+  // the user re-taps against what today actually looks like.
+  if (await ensureToday()) return;
+
+  const willCheck = !state.completed.has(goalId);
+  if (CONFIG.REQUIRE_PHOTO_TO_VERIFY && willCheck && !state.photos.has(goalId)) {
+    requestPhoto?.(goalId);           // photo-gated: attachPhoto() completes the goal
+    return;
+  }
+
   const wasAllDone = state.goals.length > 0 && state.completed.size === state.goals.length;
   const completed = new Set(state.completed);
   const nowChecked = !completed.has(goalId);
@@ -423,6 +481,14 @@ export async function toggleGoal(goalId) {
 
   const nowAllDone = state.goals.length > 0 && completed.size === state.goals.length;
   if (nowAllDone && !wasAllDone) celebrate(state.streak.current);
+
+  // unchecking discards the day's photo for that goal (the completion row it
+  // annotates is being deleted); storage cleanup is best-effort
+  if (!nowChecked && state.photos.has(goalId)) {
+    const p = state.photos.get(goalId);
+    state.photos.delete(goalId);
+    if (backend() && p.path) api.removeCompletionPhoto(p.path).catch(() => {});
+  }
 
   await persistCompletion(goalId, nowChecked);
   persistCache();
@@ -437,6 +503,63 @@ async function persistCompletion(goalId, checked) {
     await api.setCompletion(goalId, state.localDate, checked);
     await syncTodayResult();
   } catch (e) { offline.queuePendingWrite(entry); }
+}
+
+// ---- photo verification (optional proof on a completed task) ----------------
+// Compress client-side (≤PHOTO_MAX_DIMENSION, JPEG) then upload to the private
+// `photos` bucket; the storage path is denormalized onto the completion row.
+export async function attachPhoto(goalId, file) {
+  if (!file || state.photoBusyId) return;
+  if (await ensureToday()) return;               // photo picked across midnight → belongs to a day that's gone
+  try {
+    setState({ photoBusyId: goalId });
+    const blob = await photos.compressImage(file);
+    // photos annotate a completion — check the goal off first if it isn't yet
+    // (this is also how REQUIRE_PHOTO_TO_VERIFY completes the goal)
+    if (!state.completed.has(goalId)) {
+      const completed = new Set(state.completed);
+      completed.add(goalId);
+      const wasAllDone = state.goals.length > 0 && state.completed.size === state.goals.length;
+      setState({ completed });
+      recomputeStreak();
+      if (!wasAllDone && completed.size === state.goals.length) celebrate(state.streak.current);
+      await persistCompletion(goalId, true);
+    }
+    let entry = { path: null, url: URL.createObjectURL(blob) };
+    if (backend() && state.online) entry.path = await api.uploadCompletionPhoto(goalId, state.localDate, blob);
+    state.photos.set(goalId, entry);
+    setState({ photoBusyId: null });
+    persistCache(); persistStreakCache();
+    showToast(entry.path || !backend() ? 'Photo added 📸' : 'Photo saved locally — reconnect to upload');
+  } catch (e) {
+    setState({ photoBusyId: null });
+    showToast("Couldn't add that photo — try again");
+  }
+}
+
+// Render the day's share card (completed goals + streak + first photo) and hand
+// it to the native share sheet; falls back to a download where Web Share can't
+// carry files.
+export async function shareDay() {
+  if (state.shareBusy || state.completed.size === 0) return;
+  try {
+    setState({ shareBusy: true });
+    const firstPhoto = [...state.photos.values()][0]?.url || null;
+    const blob = await photos.renderShareCard({
+      dateLabel: state.todayLabel,
+      streak: state.streak.current,
+      name: state.profile?.display_name || '',
+      goals: state.goals,
+      completedIds: state.completed,
+      photoUrl: firstPhoto,
+    });
+    const how = await photos.shareCard(blob);
+    setState({ shareBusy: false });
+    if (how === 'downloaded') showToast('Card saved — send it to your friends 🔥');
+  } catch {
+    setState({ shareBusy: false });
+    showToast("Couldn't make the share card");
+  }
 }
 
 // keep today's day_result row in step with live completions (finalized:false)
@@ -457,6 +580,17 @@ async function replayPending() {
     try { await api.setCompletion(e.goal_id, e.local_date, e.completed); } catch { return; /* stay queued */ }
   }
   offline.clearPendingWrites();
+  // day_results must follow the replayed completions — without this, a day
+  // completed offline keeps is_perfect:false forever and the streak walk sees
+  // a gap. goals_total for a past date is approximated by the current active-
+  // goal count (best available after the fact; exact for the common overnight case).
+  for (const d of [...new Set(queue.map((e) => e.local_date))]) {
+    try {
+      const done = (await api.getCompletions(d)).length;
+      const total = state.goals.length;
+      await api.upsertDayResult(d, { goals_total: total, goals_completed: done, is_perfect: isPerfect(done, total), finalized: false });
+    } catch { /* best-effort; migration 0005's repair block heals stragglers */ }
+  }
   await loadToday();
 }
 

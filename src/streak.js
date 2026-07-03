@@ -10,7 +10,20 @@
 // `todayIsPerfect`: whether today (in progress) is currently a perfect day.
 
 import { CONFIG } from './config.js';
-import { prevDay, addDays } from './dates.js';
+import { prevDay, addDays, eachDay } from './dates.js';
+
+// Build the gap-filled finalized history computeStreak expects from raw
+// day_results rows: everything strictly before `today`, chronological ASC,
+// with truly-missed days present as { is_perfect: false }.
+export function buildHistory(rows, today) {
+  const perfectByDate = new Map(
+    (Array.isArray(rows) ? rows : [])
+      .filter((r) => r.local_date < today)
+      .map((r) => [r.local_date, r.is_perfect]));
+  if (!perfectByDate.size) return [];
+  const start = [...perfectByDate.keys()].sort()[0];
+  return eachDay(start, prevDay(today)).map((d) => ({ local_date: d, is_perfect: perfectByDate.get(d) === true }));
+}
 
 export function computeStreak(finalizedDays, todayIsPerfect) {
   if (!Array.isArray(finalizedDays)) finalizedDays = [];

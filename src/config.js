@@ -9,6 +9,11 @@ export const CONFIG = {
   // goals
   MAX_GOALS: 20,                         // soft cap on active goals per user
 
+  // photo verification (M5)
+  REQUIRE_PHOTO_TO_VERIFY: false,        // true = checking a goal off demands a photo first
+  PHOTO_MAX_DIMENSION: 1280,             // long-edge px after client-side compression
+  PHOTO_JPEG_QUALITY: 0.8,
+
   // friends / invites (M2)
   INVITE_TTL_DAYS: 7,
   NUDGE_RATE_LIMIT: 3,

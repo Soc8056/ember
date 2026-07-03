@@ -67,6 +67,9 @@ UI). To connect the real backend, see below.
    - `supabase/migrations/0004_friend_codes.sql` — permanent per-user friend codes
      (`my_friend_code` / `add_friend_by_code`). Replaces single-use invite links: one
      reusable code per user, shareable as a link or typed directly into the app.
+   - `supabase/migrations/0005_photos.sql` — photo verification: `completions.photo_path`,
+     the private `photos` storage bucket + owner-scoped RLS, and a one-time repair that
+     recomputes `day_results` from `completions` (see `logs.md`, 2026-07-03).
 3. **Auth → Providers → Email**: enable the Email provider (magic links are on by default).
 4. **Auth → URL Configuration** — without this, magic links redirect to the default
    `http://localhost:3000` and sign-in silently dead-ends:
@@ -107,6 +110,18 @@ UI). To connect the real backend, see below.
    ```
    `src/env.js` is gitignored. The anon key is public by design — RLS is the real guard.
 7. Reload the app and sign in with your email.
+
+## Photo verification & the day share card (M5)
+
+Any **completed** goal can carry one photo per day (camera or library). Photos are
+compressed client-side (≤1280 px JPEG, ~100–300 KB) and stored in the private `photos`
+Supabase Storage bucket at `userId/localDate/goalId.jpg`; only the owner can read them
+(signed URLs, same privacy stance as goal titles). "Share my day" renders a card —
+streak, checklist, first photo — and hands it to the native share sheet (Web Share API),
+falling back to a PNG download.
+
+Photos are optional by default. Set `REQUIRE_PHOTO_TO_VERIFY: true` in `src/config.js`
+to make checking off a goal demand a photo first.
 
 ## How the streak works (PRD §3.2)
 

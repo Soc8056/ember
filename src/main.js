@@ -24,6 +24,8 @@ const clickMap = {
   openManage: () => store.openSheet('manage'),
   closeSheet: () => store.closeSheet(),
   toggle: (el) => store.toggleGoal(el.dataset.id),
+  attachPhoto: (el) => openPhotoPicker(el.dataset.id),
+  shareDay: () => store.shareDay(),
   addGoal: () => store.addGoal(),
   askDelete: (el) => store.askDelete(el.dataset.id),
   cancelDelete: () => store.cancelDelete(),
@@ -121,6 +123,24 @@ root.addEventListener('drop', (e) => {
   if (dragId && row && row.dataset.id !== dragId) { e.preventDefault(); store.reorderGoals(dragId, row.dataset.id); }
   dragId = null;
 });
+
+// ---- photo verification: the picker input lives in index.html (outside #app,
+// so re-renders can't destroy it). Aim it at a goal, click it, forward the file.
+const photoInput = document.getElementById('photoInput');
+let photoGoalId = null;
+function openPhotoPicker(goalId) {
+  if (!photoInput || !goalId) return;
+  photoGoalId = goalId;
+  photoInput.value = '';              // same file re-picked still fires change
+  photoInput.click();
+}
+photoInput?.addEventListener('change', () => {
+  const file = photoInput.files && photoInput.files[0];
+  if (file && photoGoalId) store.attachPhoto(photoGoalId, file);
+  photoGoalId = null;
+});
+// REQUIRE_PHOTO_TO_VERIFY: the store asks us to open the picker mid-toggle
+store.setPhotoRequester(openPhotoPicker);
 
 // ---- go ---------------------------------------------------------------------
 render();
